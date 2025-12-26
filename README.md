@@ -1,130 +1,303 @@
+🚀 Two-Tier Flask Application Deployment
+---
+
+Docker · Kubernetes · Helm · AWS (Kind → EKS Ready)
+
+---
+
+
+📌 Project Overview
+
+This project demonstrates a complete end-to-end DevOps workflow for deploying a Two-Tier Flask + MySQL application, starting from local development to Kubernetes and Helm, with cloud-ready architecture for AWS.
+
+---
+
+✔ What this project covers
+
+- Flask backend + MySQL database
+
+- Dockerized application & database
+
+- Docker Compose (local testing)
+
+- Kubernetes manifests
+
+- Helm charts (MySQL + Flask app)
+
+- Kind cluster (local Kubernetes)
+
+- GitHub → DockerHub → Kubernetes → Helm → AWS-ready pipeline
+
+---
+
+Real-world troubleshooting (DB wait, InitContainers, ImagePull issues)
+
+---
+
+  🏗️ Architecture
+  
+    Developer (GitHub)
+            |
+            v
+       GitHub Repo
+            |
+            v
+       Docker Build
+            |
+            v
+       DockerHub
+            |
+            v
+       Kubernetes Cluster
+            |
+            v
+         Helm Charts
+            |
+            v
+       AWS (EKS Ready)
+
+---
+
+Two containers:
+
+- Flask App (Python)
+
+- MySQL Database
+
+---
+
+🛠️ Tech Stack
+
+ Layer	Technology
  
-# Flask App with MySQL Docker Setup
+ - Backend	Flask (Python)
+ 
+ - Database	MySQL 5.7
+ 
+ - Containers	Docker
+ 
+ - Orchestration	Kubernetes
+ 
+ - Package Manager	Helm
+ 
+ - Local K8s	Kind
+ 
+ - Cloud Target	AWS (EKS)
+ 
+ - CI/CD Ready	GitHub + DockerHub
+ 
+ ---
+ 
+📁 Repository Structure
 
-This is a simple Flask app that interacts with a MySQL database. The app allows users to submit messages, which are then stored in the database and displayed on the frontend.
+    two-tier-flask-app/
+    ├── app.py
+    ├── requirements.txt
+    ├── Dockerfile
+    ├── Dockerfile-multistage
+    ├── docker-compose.yml
+    ├── message.sql
+    ├── templates/
+    │   └── index.html
+    ├── k8s/
+    │   ├── deployment.yml
+    │   ├── svc.yml
+    │   └── mysql.yml
+    ├── mysql-chart/
+    │   └── Helm chart for MySQL
+    ├── flask-app-chart/
+    │   └── Helm chart for Flask app
+    ├── kind-setup/
+    │   └── config.yml
+    ├── Jenkinsfile
+    ├── Makefile
+    └── README.md
 
-## Prerequisites
+⚙️ Application Configuration
 
-Before you begin, make sure you have the following installed:
+AWS EC2 Instance minimum requirements
 
-- Docker
-- Git (optional, for cloning the repository)
-
-## Setup
-
-1. Clone this repository (if you haven't already):
-
-   ```bash
-   git clone https://github.com/your-username/your-repo-name.git
-   ```
-
-2. Navigate to the project directory:
-
-   ```bash
-   cd your-repo-name
-   ```
-
-3. Create a `.env` file in the project directory to store your MySQL environment variables:
-
-   ```bash
-   touch .env
-   ```
-
-4. Open the `.env` file and add your MySQL configuration:
-
-   ```
-   MYSQL_HOST=mysql
-   MYSQL_USER=your_username
-   MYSQL_PASSWORD=your_password
-   MYSQL_DB=your_database
-   ```
-
-## Usage
-
-1. Start the containers using Docker Compose:
-
-   ```bash
-   docker-compose up --build
-   ```
-
-2. Access the Flask app in your web browser:
-
-   - Frontend: http://localhost
-   - Backend: http://localhost:5000
-
-3. Create the `messages` table in your MySQL database:
-
-   - Use a MySQL client or tool (e.g., phpMyAdmin) to execute the following SQL commands:
+ - ec2 linux ubuntu instance
    
-     ```sql
-     CREATE TABLE messages (
-         id INT AUTO_INCREMENT PRIMARY KEY,
-         message TEXT
-     );
-     ```
+ - instance type : t2.medium
+   
+ - Storage 20GB
 
-4. Interact with the app:
+ - Give access from all ports
 
-   - Visit http://localhost to see the frontend. You can submit new messages using the form.
-   - Visit http://localhost:5000/insert_sql to insert a message directly into the `messages` table via an SQL query.
+ - insatnce -1
 
-## Cleaning Up
+   ---
+   
+Environment Variables (Flask App)
 
-To stop and remove the Docker containers, press `Ctrl+C` in the terminal where the containers are running, or use the following command:
+     MYSQL_HOST=mysql
+     MYSQL_USER=admin
+     MYSQL_PASSWORD=admin
+     MYSQL_DB=myDb
 
-```bash
-docker-compose down
-```
+ ---
 
-## To run this two-tier application using  without docker-compose
+🐳 Docker Setup
 
-- First create a docker image from Dockerfile
-```bash
-docker build -t flaskapp .
-```
+🔹 Build Flask Image
 
-- Now, make sure that you have created a network using following command
-```bash
-docker network create twotier
-```
+docker build -t <dockerhub-username>/flask-app:latest .
 
-- Attach both the containers in the same network, so that they can communicate with each other
+🔹 Push to DockerHub
 
-i) MySQL container 
-```bash
-docker run -d \
-    --name mysql \
-    -v mysql-data:/var/lib/mysql \
-    --network=twotier \
-    -e MYSQL_DATABASE=mydb \
-    -e MYSQL_ROOT_PASSWORD=admin \
-    -p 3306:3306 \
-    mysql:5.7
+docker login
 
-```
-ii) Backend container
-```bash
-docker run -d \
-    --name flaskapp \
-    --network=twotier \
-    -e MYSQL_HOST=mysql \
-    -e MYSQL_USER=root \
-    -e MYSQL_PASSWORD=admin \
-    -e MYSQL_DB=mydb \
-    -p 5000:5000 \
-    flaskapp:latest
+docker push <dockerhub-username>/flask-app:latest
 
-```
+🧪 Local Testing with Docker Compose
 
-## Notes
+docker compose up -d
 
-- Make sure to replace placeholders (e.g., `your_username`, `your_password`, `your_database`) with your actual MySQL configuration.
+Check:
 
-- This is a basic setup for demonstration purposes. In a production environment, you should follow best practices for security and performance.
+docker ps
 
-- Be cautious when executing SQL queries directly. Validate and sanitize user inputs to prevent vulnerabilities like SQL injection.
+Stop:
 
-- If you encounter issues, check Docker logs and error messages for troubleshooting.
+docker compose down -v
 
-```
+---
+
+☸️ Kubernetes Setup (Kind)
+
+🔹 Install Kind
+
+    curl -Lo ./kind https://kind.sigs.k8s.io/dl/v0.23.0/kind-linux-amd64
+    chmod +x kind
+    sudo mv kind /usr/local/bin/
+
+🔹 Kind Cluster Config (kind-setup/config.yml)
+
+    kind: Cluster
+    apiVersion: kind.x-k8s.io/v1alpha4
+    nodes:
+    - role: control-plane
+    - role: worker
+    - role: worker
+
+🔹 Create Cluster
+
+    kind create cluster --name tws-cluster --config kind-setup/config.yml
+
+---
+
+Verify:
+
+kubectl get nodes
+
+☸️ Kubernetes Deployment (YAML)
+
+   🔹 Deploy MySQL
+   
+   kubectl apply -f k8s/mysql.yml
+   
+   🔹 Deploy Flask App
+   
+   kubectl apply -f k8s/deployment.yml
+   
+   kubectl apply -f k8s/svc.yml
+
+Check:
+
+kubectl get pods
+
+kubectl get svc
+
+---
+
+📦 Helm Setup
+🔹 Install Helm
+
+    curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
+
+Verify:
+
+    helm version
+
+📦 Helm: MySQL Chart
+
+cd mysql-chart
+
+    helm lint .
+    helm install mysql-chart .
+
+
+Check:
+
+    kubectl get pods
+    kubectl get svc mysql-chart
+
+📦 Helm: Flask App Chart
+
+cd flask-app-chart
+
+    helm lint .
+    helm install flask-app-chart .
+
+
+Check:
+
+    kubectl get pods
+    kubectl get svc flask-app-chart
+
+---
+
+⏳ MySQL Dependency Handling (IMPORTANT)
+
+Flask app uses an InitContainer to wait for MySQL:
+
+    initContainers:
+    - name: wait-for-mysql
+      image: mysql:5.7
+      command:
+        - sh
+        - -c
+        - |
+          until mysqladmin ping -h mysql-chart -uroot -padmin --silent; do
+            echo "Waiting for MySQL..."
+            sleep 5
+          done
+
+
+This avoids CrashLoopBackOff.
+
+---
+
+🌐 Access the Application
+NodePort
+kubectl get svc flask-app-chart
+
+Example:
+
+http://<NODE-IP>:32230
+
+Port Forward (Local)
+kubectl port-forward svc/flask-app-chart 8080:80
+
+---
+
+
+🧹 Cleanup
+
+    helm uninstall flask-app-chart
+    helm uninstall mysql-chart
+    kind delete cluster --name tws-cluster
+    docker system prune -af
+
+---
+
+👨‍💻 Author
+
+Priyanshu Singh
+DevOps | Cloud | Kubernetes | Helm
+
+⭐ If you found this useful
+
+Star ⭐ the repo and fork 🍴 it to build your own production pipelines.
 
