@@ -19,7 +19,7 @@
 ---
 
 <p align="center">
-  <img src="architecture.jpeg" width="900" alt="Architecture Diagram"/>
+  <img src="architecture.jpg" width="900" alt="Architecture Diagram"/>
 </p>
 
 ---
